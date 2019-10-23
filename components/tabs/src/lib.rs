@@ -6,7 +6,12 @@
 #![warn(rust_2018_idioms)]
 
 #[macro_use]
-mod error;
+pub mod error;
 mod ffi;
+mod record;
+mod store;
 
 // <TODO-ST>
+
+pub use crate::store::TabsStore;
+pub use error::{Error, ErrorKind, Result};

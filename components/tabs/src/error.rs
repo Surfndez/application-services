@@ -4,7 +4,14 @@
 
 use failure::Fail;
 
-// #[derive(Debug, Fail)]
+#[derive(Debug, Fail)]
 pub enum ErrorKind {
-    // <TODO-ST>
+    #[fail(display = "Error parsing JSON data: {}", _0)]
+    JsonError(#[fail(cause)] serde_json::Error),
+}
+
+error_support::define_error! {
+    ErrorKind {
+        (JsonError, serde_json::Error),
+    }
 }

@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use std::cell::Cell;
 use crate::record::{ClientTabsRecord, TabsRecordTab};
 use std::result;
 use sync15::{
@@ -60,6 +61,7 @@ pub struct TabsStore {
     local_id: String, // todo Redundant with ClientRemoteTabs.client_id!
     local_tabs: Option<ClientRemoteTabs>,
     remote_tabs: Vec<ClientRemoteTabs>,
+    last_sync: Cell<Option<ServerTimestamp>>, // We use a cell because `sync_finished` doesn't take a mutable reference to &self.
 }
 
 impl TabsStore {
@@ -68,6 +70,7 @@ impl TabsStore {
             local_id: local_id.to_owned(),
             remote_tabs: vec![],
             local_tabs: None,
+            last_sync: Cell::new(None),
         }
     }
 }
@@ -119,19 +122,17 @@ impl Store for TabsStore {
         new_timestamp: ServerTimestamp,
         records_synced: Vec<Guid>,
     ) -> result::Result<(), failure::Error> {
-        // self.db.mark_as_synchronized(
-        //     &records_synced.iter().map(Guid::as_str).collect::<Vec<_>>(),
-        //     new_timestamp,
-        //     &self.scope,
-        // )?;
-        // Ok(())
-        unimplemented!("TODO!");
+        log::info!(
+            "sync completed after uploading {} records",
+            records_synced.len()
+        );
+        self.last_sync.set(Some(new_timestamp));
+        Ok(())
     }
 
     fn get_collection_request(&self) -> result::Result<CollectionRequest, failure::Error> {
-        // let since = self.db.get_last_sync()?.unwrap_or_default();
-        // Ok(CollectionRequest::new("tabs").full().newer_than(since))
-        unimplemented!("TODO!");
+        let since = self.last_sync.get().unwrap_or_default();
+        Ok(CollectionRequest::new("tabs").full().newer_than(since))
     }
 
     fn get_sync_assoc(&self) -> result::Result<StoreSyncAssociation, failure::Error> {

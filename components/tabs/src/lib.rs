@@ -8,10 +8,10 @@
 #[macro_use]
 pub mod error;
 mod ffi;
-mod record;
-mod store;
+mod storage;
+mod sync;
 
 // <TODO-ST>
 
-pub use crate::store::TabsStore;
+pub use crate::sync::store::TabsStore;
 pub use error::{Error, ErrorKind, Result};

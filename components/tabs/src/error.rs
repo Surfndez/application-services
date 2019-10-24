@@ -6,12 +6,16 @@ use failure::Fail;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
+    #[fail(display = "Error synchronizing: {}", _0)]
+    SyncAdapterError(#[fail(cause)] sync15::Error),
+
     #[fail(display = "Error parsing JSON data: {}", _0)]
     JsonError(#[fail(cause)] serde_json::Error),
 }
 
 error_support::define_error! {
     ErrorKind {
+        (SyncAdapterError, sync15::Error),
         (JsonError, serde_json::Error),
     }
 }

@@ -2,22 +2,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use std::cell::RefCell;
+use crate::storage::TabsStorage;
+use crate::storage::{ClientRemoteTabs, RemoteTab};
+use crate::sync::record::{ClientTabsRecord, TabsRecordTab};
 use std::cell::Cell;
-use crate::record::{ClientTabsRecord, TabsRecordTab};
 use std::result;
 use sync15::{
-    extract_v1_state, telemetry, CollSyncIds, CollectionRequest, IncomingChangeset,
-    OutgoingChangeset, Payload, ServerTimestamp, Store, StoreSyncAssociation,
+    telemetry, CollectionRequest, IncomingChangeset, OutgoingChangeset, Payload, ServerTimestamp,
+    Store, StoreSyncAssociation,
 };
 use sync_guid::Guid;
-
-pub struct RemoteTab {
-    title: String,
-    url_history: Vec<String>,
-    icon: Option<String>,
-    last_used: u64, // In ms.
-}
 
 impl RemoteTab {
     fn from_record_tab(tab: &TabsRecordTab) -> Self {
@@ -38,11 +32,6 @@ impl RemoteTab {
     }
 }
 
-pub struct ClientRemoteTabs {
-    client_id: String, // Corresponds to the FxA device id of the client.
-    remote_tabs: Vec<RemoteTab>,
-}
-
 impl ClientRemoteTabs {
     fn from_record(client_id: String, record: ClientTabsRecord) -> Self {
         Self {
@@ -53,30 +42,32 @@ impl ClientRemoteTabs {
     fn to_record(&self) -> ClientTabsRecord {
         ClientTabsRecord {
             id: self.client_id.clone(),
-            tabs: self.remote_tabs.iter().map(RemoteTab::to_record_tab).collect(),
+            tabs: self
+                .remote_tabs
+                .iter()
+                .map(RemoteTab::to_record_tab)
+                .collect(),
         }
     }
 }
 
-pub struct TabsStore {
-    local_id: String, // todo Redundant with ClientRemoteTabs.client_id!
-    local_tabs: Option<ClientRemoteTabs>,
-    remote_tabs: RefCell<Vec<ClientRemoteTabs>>,
+pub struct TabsStore<'a> {
+    storage: &'a TabsStorage,
+    local_id: String,
     last_sync: Cell<Option<ServerTimestamp>>, // We use a cell because `sync_finished` doesn't take a mutable reference to &self.
 }
 
-impl TabsStore {
-    pub fn new(local_id: &str) -> Self {
+impl<'a> TabsStore<'a> {
+    pub fn new(local_id: &str, storage: &'a TabsStorage) -> Self {
         Self {
             local_id: local_id.to_owned(),
-            remote_tabs: RefCell::new(Vec::new()),
-            local_tabs: None,
-            last_sync: Cell::new(None),
+            storage,
+            last_sync: Cell::default(),
         }
     }
 }
 
-impl Store for TabsStore {
+impl<'a> Store for TabsStore<'a> {
     fn collection_name(&self) -> &'static str {
         "tabs"
     }
@@ -88,9 +79,7 @@ impl Store for TabsStore {
     ) -> result::Result<OutgoingChangeset, failure::Error> {
         let mut incoming_telemetry = telemetry::EngineIncoming::new();
 
-        let mut remote_tabs = self.remote_tabs.borrow_mut();
-        remote_tabs.clear();
-        remote_tabs.reserve_exact(inbound.changes.len() - 1); // -1 because one of the records is ours.
+        let mut remote_tabs = Vec::with_capacity(inbound.changes.len() - 1); // -1 because one of the records is ours.
 
         for incoming in inbound.changes {
             if incoming.0.id() == self.local_id {
@@ -109,8 +98,9 @@ impl Store for TabsStore {
             let id = record.id.clone();
             remote_tabs.push(ClientRemoteTabs::from_record(id, record));
         }
+        self.storage.replace_remote_tabs(remote_tabs);
         let mut outgoing = OutgoingChangeset::new("tabs".into(), inbound.timestamp);
-        if let Some(local_tabs) = &self.local_tabs {
+        if let Some(local_tabs) = self.storage.get_local_tabs() {
             let payload = Payload::from_record(local_tabs.to_record())?;
             log::trace!("outgoing {:?}", payload);
             outgoing.changes.push(payload);
@@ -138,23 +128,17 @@ impl Store for TabsStore {
     }
 
     fn get_sync_assoc(&self) -> result::Result<StoreSyncAssociation, failure::Error> {
-        // let global = self.db.get_meta(schema::GLOBAL_SYNCID_META_KEY)?;
-        // let coll = self.db.get_meta(schema::COLLECTION_SYNCID_META_KEY)?;
-        // Ok(if let (Some(global), Some(coll)) = (global, coll) {
-        //     StoreSyncAssociation::Connected(CollSyncIds { global, coll })
-        // } else {
-        //     StoreSyncAssociation::Disconnected
-        // })
-        unimplemented!("TODO!");
+        // This will cause the sync manager to call `reset`, which does nothing.
+        Ok(StoreSyncAssociation::Disconnected)
     }
 
     fn reset(&self, _assoc: &StoreSyncAssociation) -> result::Result<(), failure::Error> {
-        self.wipe()
+        // Do nothing!
+        Ok(())
     }
 
     fn wipe(&self) -> result::Result<(), failure::Error> {
-        let mut remote_tabs = self.remote_tabs.borrow_mut();
-        remote_tabs.clear();
+        // Do nothing!
         Ok(())
     }
 }

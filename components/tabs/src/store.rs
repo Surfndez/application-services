@@ -148,15 +148,13 @@ impl Store for TabsStore {
         unimplemented!("TODO!");
     }
 
-    fn reset(&self, assoc: &StoreSyncAssociation) -> result::Result<(), failure::Error> {
-        // self.db.reset(assoc)?;
-        // Ok(())
-        unimplemented!("TODO!");
+    fn reset(&self, _assoc: &StoreSyncAssociation) -> result::Result<(), failure::Error> {
+        self.wipe()
     }
 
     fn wipe(&self) -> result::Result<(), failure::Error> {
-        // self.db.wipe(&self.scope)?;
-        // Ok(())
-        unimplemented!("TODO!");
+        let mut remote_tabs = self.remote_tabs.borrow_mut();
+        remote_tabs.clear();
+        Ok(())
     }
 }

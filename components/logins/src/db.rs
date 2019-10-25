@@ -565,14 +565,7 @@ impl LoginDb {
         Ok(())
     }
 
-    pub fn dupicate_exists(
-        &self,
-        login: Login,
-        username: &str,
-        hostname: &str,
-        http_realm: &str,
-        form_submit: &str,
-    ) -> Result<bool> {
+    pub fn dupicate_exists(&self, login: Login) -> Result<bool> {
         login.check_valid()?;
 
         Ok(self.db.query_row_and_then(
@@ -602,7 +595,12 @@ impl LoginDb {
                     )",
                 common_cols = schema::COMMON_COLS
             ),
-            &[hostname, username, http_realm, form_submit],
+            &[
+                &*login.hostname,
+                &*login.username,
+                &*login.http_realm.unwrap(),
+                &*login.form_submit_url.unwrap(),
+            ],
             |row| row.get(0),
         )?)
     }

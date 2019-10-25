@@ -1001,6 +1001,32 @@ lazy_static! {
          SELECT {common_cols} FROM loginsM WHERE is_overridden = 0",
         common_cols = schema::COMMON_COLS,
     );
+    static ref GET_ALL_DUPES: String = format!(
+        "SELECT {common_cols}
+         FROM loginsL
+         WHERE is_deleted = 0
+            AND hostname = :hostname
+            AND NULLIF(username, '') = :username
+            AND (
+                (http_realm IS NULL AND form_submit = :form_submit)
+                OR
+                (form_submit IS NULL AND http_realm = :http_realm)
+            )
+
+         UNION ALL
+
+         SELECT {common_cols}
+         FROM loginsM
+         WHERE is_overridden = 0
+            AND hostname = :hostname
+            AND NULLIF(username, '') = :username
+            AND (
+                (http_realm IS NULL AND form_submit = :form_submit)
+                OR
+                (form_submit IS NULL AND http_realm = :http_realm)
+            )",
+        common_cols = schema::COMMON_COLS,
+    );
     static ref GET_BY_GUID_SQL: String = format!(
         "SELECT {common_cols}
          FROM loginsL

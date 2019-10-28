@@ -3,7 +3,8 @@
 ![status-img](https://img.shields.io/static/v1?label=not%20implemented&message=Firefox%20Preview,%20Desktop,%20iOS&color=darkred)
 
 ## Implementation Overview
-<TODO-ST>
+
+This crate implements an in-memory syncing engine for remote tabs.
 
 ## Directory structure
 The relevant directories are as follows:
@@ -21,12 +22,23 @@ The relevant directories are as follows:
   `ffi`.
 
 ## Features
-<TODO-ST>
-
+- Synchronization of the local and remote session states.
 
 ## Business Logic
 
-<TODO-ST>
+### Storage
+
+The storage is all done in memory for simplicity purposes. The host applications are free to persist the remote tabs list if it makes sense to them.
+
+### Payload format
+
+Every remote sync record is roughtly a list of tabs with their URL history (think of the back button). There is one record for each client.
+
+### Association with device IDs
+
+Each remote tabs sync record is associated to a "client" using a `client_id` field, which is really a foreign-key to a `clients` collection record.
+However, because we'd like to move away from the clients collection, which is why this crate associates these records with Firefox Accounts device ids.
+Currently for platforms using the sync-manager provided in this repo, the `client_id` is really the Firefox Accounts device ID and all is well, however for older platforms it is a distinct ID, which is why we have to feed the `clients` collection to this Tabs Sync engine to associate the correct Firefox Account device id.
 
 ## Getting started
 

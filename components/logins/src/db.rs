@@ -565,34 +565,36 @@ impl LoginDb {
         Ok(())
     }
 
-    pub fn dupicate_exists(&self, login: Login) -> Result<bool> {
+    pub fn check_valid_with_no_dupes(&self, login: Login) -> Result<bool> {
         login.check_valid()?;
 
         Ok(self.db.query_row_and_then(
             &format!(
-                "SELECT {common_cols}
-                 FROM loginsL
-                 WHERE is_deleted = 0
-                    AND hostname = :hostname
-                    AND NULLIF(username, '') = :username
-                    AND (
-                        (http_realm IS NULL AND form_submit = :form_submit)
-                        OR
-                        (form_submit IS NULL AND http_realm = :http_realm)
-                    )
+                "SELECT EXISTS(
+                    SELECT {common_cols}
+                    FROM loginsL
+                    WHERE is_deleted = 0
+                        AND hostname = :hostname
+                        AND NULLIF(username, '') = :username
+                        AND (
+                            (http_realm IS NULL AND form_submit = :form_submit)
+                            OR
+                            (form_submit IS NULL AND http_realm = :http_realm)
+                        )
 
-                 UNION ALL
+                    UNION ALL
 
-                 SELECT {common_cols}
-                 FROM loginsM
-                 WHERE is_overridden = 0
-                    AND hostname = :hostname
-                    AND NULLIF(username, '') = :username
-                    AND (
-                        (http_realm IS NULL AND form_submit = :form_submit)
-                        OR
-                        (form_submit IS NULL AND http_realm = :http_realm)
-                    )",
+                    SELECT {common_cols}
+                    FROM loginsM
+                    WHERE is_overridden = 0
+                        AND hostname = :hostname
+                        AND NULLIF(username, '') = :username
+                        AND (
+                            (http_realm IS NULL AND form_submit = :form_submit)
+                            OR
+                            (form_submit IS NULL AND http_realm = :http_realm)
+                        )
+                 )",
                 common_cols = schema::COMMON_COLS
             ),
             &[

@@ -568,41 +568,41 @@ impl LoginDb {
     pub fn check_valid_with_no_dupes(&self, login: Login) -> Result<bool> {
         login.check_valid()?;
 
-        Ok(self.db.query_row_and_then(
-            &format!(
-                "SELECT EXISTS(
-                    SELECT {common_cols}
-                    FROM loginsL
-                    WHERE is_deleted = 0
-                        AND hostname = :hostname
-                        AND NULLIF(username, '') = :username
-                        AND (
-                            (http_realm IS NULL AND form_submit = :form_submit)
-                            OR
-                            (form_submit IS NULL AND http_realm = :http_realm)
-                        )
+        let hostname = &*login.hostname;
+        let username = &*login.username;
+        let http_realm = &*login.http_realm.unwrap();
+        let form_submit = &*login.form_submit_url.unwrap();
 
-                    UNION ALL
+        Ok(self.db.query_row_named(
+            "SELECT EXISTS(
+                SELECT 1 FROM loginsL
+                WHERE is_deleted = 0
+                    AND hostname = :hostname
+                    AND NULLIF(username, '') = :username
+                    AND (
+                        (http_realm IS NULL AND form_submit = :form_submit)
+                        OR
+                        (form_submit IS NULL AND http_realm = :http_realm)
+                    )
 
-                    SELECT {common_cols}
-                    FROM loginsM
-                    WHERE is_overridden = 0
-                        AND hostname = :hostname
-                        AND NULLIF(username, '') = :username
-                        AND (
-                            (http_realm IS NULL AND form_submit = :form_submit)
-                            OR
-                            (form_submit IS NULL AND http_realm = :http_realm)
-                        )
-                 )",
-                common_cols = schema::COMMON_COLS
-            ),
-            &[
-                &*login.hostname,
-                &*login.username,
-                &*login.http_realm.unwrap(),
-                &*login.form_submit_url.unwrap(),
-            ],
+                UNION ALL
+
+                SELECT 1 FROM loginsM
+                WHERE is_overridden = 0
+                    AND hostname = :hostname
+                    AND NULLIF(username, '') = :username
+                    AND (
+                        (http_realm IS NULL AND form_submit = :form_submit)
+                        OR
+                        (form_submit IS NULL AND http_realm = :http_realm)
+                    )
+             )",
+            named_params! {
+                ":hostname": hostname,
+                ":username": username,
+                ":http_realm": http_realm,
+                ":form_submit": form_submit,
+            },
             |row| row.get(0),
         )?)
     }

@@ -203,7 +203,7 @@ impl TestClient {
         fxa.complete_oauth_flow(&query_params["code"], &query_params["state"])?;
         log::info!("OAuth flow finished");
 
-        fxa.initialize_device("Testing Device", fxa_client::device::Type::Desktop, &vec![])?;
+        fxa.initialize_device("Testing Device", fxa_client::device::Type::Desktop, &[])?;
 
         let device_id = fxa.get_current_device_id()?;
 

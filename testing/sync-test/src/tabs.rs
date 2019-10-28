@@ -46,7 +46,7 @@ fn test_tabs(c0: &mut TestClient, c1: &mut TestClient) {
 
     let t0 = RemoteTab {
         icon: None,
-        last_used: 1572265044661,
+        last_used: 1_572_265_044_661,
         title: "Welcome to Bobo".to_owned(),
         url_history: vec!["https://bobo.moz".to_owned()],
     };
@@ -65,13 +65,13 @@ fn test_tabs(c0: &mut TestClient, c1: &mut TestClient) {
 
     let t1 = RemoteTab {
         icon: None,
-        last_used: 1572267197207,
+        last_used: 1_572_267_197_207,
         title: "Foo".to_owned(),
         url_history: vec!["https://foo.org".to_owned()],
     };
     let t2 = RemoteTab {
         icon: None,
-        last_used: 1572267191104,
+        last_used: 1_572_267_191_104,
         title: "Bar".to_owned(),
         url_history: vec!["https://bar.org".to_owned()],
     };

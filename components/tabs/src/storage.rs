@@ -20,23 +20,29 @@ pub struct ClientRemoteTabs {
 }
 
 pub struct TabsStorage {
-    local_tabs: Option<ClientRemoteTabs>,
+    local_id: String,
+    local_tabs: Option<Vec<RemoteTab>>,
     remote_tabs: RefCell<Option<Vec<ClientRemoteTabs>>>,
 }
 
 impl TabsStorage {
-    pub fn new() -> Self {
+    pub fn new(local_id: &str) -> Self {
         Self {
+            local_id: local_id.to_owned(),
             local_tabs: None,
             remote_tabs: RefCell::default(),
         }
     }
 
-    pub fn update_local_state(&mut self, local_state: ClientRemoteTabs) {
+    pub fn get_local_id(&self) -> &str {
+        &self.local_id
+    }
+
+    pub fn update_local_state(&mut self, local_state: Vec<RemoteTab>) {
         self.local_tabs.replace(local_state);
     }
 
-    pub fn get_local_tabs(&self) -> Option<&ClientRemoteTabs> {
+    pub fn get_local_tabs(&self) -> Option<&Vec<RemoteTab>> {
         self.local_tabs.as_ref()
     }
 
@@ -44,7 +50,7 @@ impl TabsStorage {
         self.remote_tabs.borrow().clone()
     }
 
-    pub fn replace_remote_tabs(&self, new_remote_tabs: Vec<ClientRemoteTabs>) {
+    pub(crate) fn replace_remote_tabs(&self, new_remote_tabs: Vec<ClientRemoteTabs>) {
         let mut remote_tabs = self.remote_tabs.borrow_mut();
         remote_tabs.replace(new_remote_tabs);
     }

@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use crate::error::*;
-use crate::storage::{ClientRemoteTabs, TabsStorage};
+use crate::storage::{ClientRemoteTabs, RemoteTab, TabsStorage};
 use crate::sync::store::TabsStore;
 use interrupt::NeverInterrupts;
 use std::cell::Cell;
@@ -15,11 +15,15 @@ pub struct TabsEngine {
 }
 
 impl TabsEngine {
-    pub fn new() -> Self {
+    pub fn new(local_id: &str) -> Self {
         Self {
-            storage: TabsStorage::new(),
+            storage: TabsStorage::new(local_id),
             mem_cached_state: Cell::default(),
         }
+    }
+
+    pub fn update_local_state(&mut self, local_state: Vec<RemoteTab>) {
+        self.storage.update_local_state(local_state);
     }
 
     pub fn remote_tabs(&self) -> Option<Vec<ClientRemoteTabs>> {
@@ -29,12 +33,11 @@ impl TabsEngine {
     /// A convenience wrapper around sync_multiple.
     pub fn sync(
         &self,
-        local_id: &str,
         storage_init: &Sync15StorageClientInit,
         root_sync_key: &KeyBundle,
     ) -> Result<telemetry::SyncTelemetryPing> {
         let mut mem_cached_state = self.mem_cached_state.take();
-        let store = TabsStore::new(local_id, &self.storage);
+        let store = TabsStore::new(&self.storage);
 
         let mut result = sync_multiple(
             &[&store],

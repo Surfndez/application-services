@@ -11,7 +11,7 @@ mod ffi;
 mod storage;
 mod sync;
 
-// <TODO-ST>
-
+pub use crate::storage::{ClientRemoteTabs, RemoteTab};
+pub use crate::sync::engine::TabsEngine;
 pub use crate::sync::store::TabsStore;
 pub use error::{Error, ErrorKind, Result};

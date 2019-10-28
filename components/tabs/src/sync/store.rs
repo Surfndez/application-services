@@ -53,14 +53,12 @@ impl ClientRemoteTabs {
 
 pub struct TabsStore<'a> {
     storage: &'a TabsStorage,
-    local_id: String,
     last_sync: Cell<Option<ServerTimestamp>>, // We use a cell because `sync_finished` doesn't take a mutable reference to &self.
 }
 
 impl<'a> TabsStore<'a> {
-    pub fn new(local_id: &str, storage: &'a TabsStorage) -> Self {
+    pub fn new(storage: &'a TabsStorage) -> Self {
         Self {
-            local_id: local_id.to_owned(),
             storage,
             last_sync: Cell::default(),
         }
@@ -78,11 +76,11 @@ impl<'a> Store for TabsStore<'a> {
         telem: &mut telemetry::Engine,
     ) -> result::Result<OutgoingChangeset, failure::Error> {
         let mut incoming_telemetry = telemetry::EngineIncoming::new();
-
-        let mut remote_tabs = Vec::with_capacity(inbound.changes.len() - 1); // -1 because one of the records is ours.
+        let local_id = self.storage.get_local_id();
+        let mut remote_tabs = Vec::with_capacity(inbound.changes.len());
 
         for incoming in inbound.changes {
-            if incoming.0.id() == self.local_id {
+            if incoming.0.id() == local_id {
                 // That's our own record, ignore it.
                 continue;
             }
@@ -94,14 +92,19 @@ impl<'a> Store for TabsStore<'a> {
                     continue;
                 }
             };
-            // TODO: this is totaly wrong, we need to get fxa_client_id from the clients collection instead.
+            // TODO: this is wrong anything that doesn't use the sync manager crate,
+            // we need to get fxa_client_id from the clients collection instead.
             let id = record.id.clone();
             remote_tabs.push(ClientRemoteTabs::from_record(id, record));
         }
         self.storage.replace_remote_tabs(remote_tabs);
         let mut outgoing = OutgoingChangeset::new("tabs".into(), inbound.timestamp);
         if let Some(local_tabs) = self.storage.get_local_tabs() {
-            let payload = Payload::from_record(local_tabs.to_record())?;
+            let local_record = ClientRemoteTabs {
+                client_id: local_id.to_owned(),
+                remote_tabs: local_tabs.to_vec(),
+            };
+            let payload = Payload::from_record(local_record.to_record())?;
             log::trace!("outgoing {:?}", payload);
             outgoing.changes.push(payload);
         }

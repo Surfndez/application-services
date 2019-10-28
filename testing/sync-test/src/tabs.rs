@@ -22,7 +22,7 @@ pub fn assert_remote_tabs_equiv(l: &ClientRemoteTabs, r: &ClientRemoteTabs) {
     assert_eq!(l.client_id, r.client_id);
     assert_eq!(l.remote_tabs.len(), r.remote_tabs.len());
 
-    let mut iter = l.remote_tabs.iter().zip(r.remote_tabs.iter());
+    let iter = l.remote_tabs.iter().zip(r.remote_tabs.iter());
     for (l, r) in iter {
         assert_eq!(l.title, r.title);
         assert_eq!(l.icon, r.icon);

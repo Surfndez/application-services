@@ -2405,6 +2405,7 @@ dependencies = [
  "serde_json 1.0.41 (registry+https://github.com/rust-lang/crates.io-index)",
  "sql-support 0.1.0",
  "sync15 0.1.0",
+ "tabs 0.1.0",
  "url 1.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

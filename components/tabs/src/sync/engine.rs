@@ -10,7 +10,7 @@ use std::cell::Cell;
 use sync15::{sync_multiple, telemetry, KeyBundle, MemoryCachedState, Sync15StorageClientInit};
 
 pub struct TabsEngine {
-    storage: TabsStorage,
+    pub storage: TabsStorage,
     mem_cached_state: Cell<MemoryCachedState>,
 }
 

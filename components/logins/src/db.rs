@@ -570,8 +570,8 @@ impl LoginDb {
 
         let hostname = &*login.hostname;
         let username = &*login.username;
-        let http_realm = &*login.http_realm.unwrap();
-        let form_submit = &*login.form_submit_url.unwrap();
+        let http_realm = &login.http_realm.unwrap_or_default();
+        let form_submit = &login.form_submit_url.unwrap_or_default();
 
         Ok(self.db.query_row_named(
             "SELECT EXISTS(
@@ -1130,5 +1130,32 @@ mod tests {
         assert_eq!(res.len(), 2);
         assert_eq!(res[0].guid, "dummy_000001");
         assert_eq!(res[1].guid, "dummy_000003");
+    }
+
+    #[test]
+    fn test_check_valid_with_no_dupes() {
+        let db = LoginDb::open_in_memory(Some("testing")).unwrap();
+        let scope = db.begin_interrupt_scope();
+        let guid = Guid::random();
+        let form_submit = "https://www.example.com/submit";
+        let hostname = "https://www.example.com/submit";
+        let username = "test";
+        let password = "test";
+        let hostname_duplicate_login = Login {
+            guid,
+            form_submit_url: Some(form_submit.to_string()),
+            hostname: hostname.to_string(),
+            http_realm: None,
+            username: username.to_string(),
+            password: password.to_string(),
+            username_field: String::new(),
+            password_field: String::new(),
+            time_created: 0,
+            time_last_used: 0,
+            time_password_changed: 0,
+            times_used: 0,
+        };
+        // TODO: mock db call
+        // assert!(db.check_valid_with_no_dupes(hostname_duplicate_login).is_ok());
     }
 }

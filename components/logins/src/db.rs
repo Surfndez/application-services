@@ -567,7 +567,10 @@ impl LoginDb {
 
     pub fn check_valid_with_no_dupes(&self, login: Login) -> Result<bool> {
         login.check_valid()?;
+        self.dupe_exists(login)
+    }
 
+    pub fn dupe_exists(&self, login: Login) -> Result<bool> {
         let hostname = &*login.hostname;
         let username = &*login.username;
         let http_realm = &login.http_realm.unwrap_or_default();
@@ -580,11 +583,11 @@ impl LoginDb {
                     AND hostname = :hostname
                     AND NULLIF(username, '') = :username
                     AND (
-                        (http_realm IS NULL AND form_submit = :form_submit)
+                        (httpRealm IS NULL AND formSubmitURL = :form_submit)
                         OR
-                        (form_submit IS NULL AND http_realm = :http_realm)
+                        (formSubmitURL IS NULL AND httpRealm = :http_realm)
                     )
-
+                    
                 UNION ALL
 
                 SELECT 1 FROM loginsM
@@ -592,9 +595,9 @@ impl LoginDb {
                     AND hostname = :hostname
                     AND NULLIF(username, '') = :username
                     AND (
-                        (http_realm IS NULL AND form_submit = :form_submit)
+                        (httpRealm IS NULL AND formSubmitURL = :form_submit)
                         OR
-                        (form_submit IS NULL AND http_realm = :http_realm)
+                        (formSubmitURL IS NULL AND httpRealm = :http_realm)
                     )
              )",
             named_params! {
@@ -1132,30 +1135,33 @@ mod tests {
         assert_eq!(res[1].guid, "dummy_000003");
     }
 
-    // #[test]
-    // fn test_check_valid_with_no_dupes() {
-    //     let db = LoginDb::open_in_memory(Some("testing")).unwrap();
-    //     let scope = db.begin_interrupt_scope();
-    //     let guid = Guid::random();
-    //     let form_submit = "https://www.example.com/submit";
-    //     let hostname = "https://www.example.com/submit";
-    //     let username = "test";
-    //     let password = "test";
-    //     let hostname_duplicate_login = Login{
-    //         guid,
-    //         form_submit_url: Some(form_submit.to_string()),
-    //         hostname: hostname.to_string(),
-    //         http_realm: None,
-    //         username: username.to_string(),
-    //         password: password.to_string(),
-    //         username_field: String::new(),
-    //         password_field: String::new(),
-    //         time_created: 0,
-    //         time_last_used: 0,
-    //         time_password_changed: 0,
-    //         times_used: 0,
-    //     };
-    //     // TODO: mock db call
-    //     assert!(db.check_valid_with_no_dupes(hostname_duplicate_login).is_ok());
-    // }
+    #[test]
+    fn test_check_valid_with_no_dupes() {
+        let db = LoginDb::open_in_memory(Some("testing")).unwrap();
+        let login = db
+            .add(Login {
+                guid: "dummy_000001".into(),
+                form_submit_url: Some("https://www.example.com/submit".into()),
+                hostname: "https://www.example.com".into(),
+                http_realm: None,
+                username: "test".into(),
+                password: "test".into(),
+                ..Login::default()
+            })
+            .unwrap();
+        let result = db
+            .check_valid_with_no_dupes(Login {
+                guid: Guid::empty(),
+                form_submit_url: Some("https://www.example.com/submit".into()),
+                hostname: "https://www.example.com".into(),
+                http_realm: None,
+                username: "test".into(),
+                password: "test".into(),
+                ..Login::default()
+            })
+            .unwrap_or_default();
+
+        db.delete(login.guid_str()).unwrap();
+        assert!(result);
+    }
 }

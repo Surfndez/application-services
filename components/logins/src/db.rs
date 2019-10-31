@@ -565,9 +565,14 @@ impl LoginDb {
         Ok(())
     }
 
-    pub fn check_valid_with_no_dupes(&self, login: Login) -> Result<bool> {
+    pub fn check_valid_with_no_dupes(&self, login: Login) -> Result<()> {
         login.check_valid()?;
-        self.dupe_exists(login)
+        let _dupe_exists = self.dupe_exists(login)?;
+
+            if _dupe_exists {
+            throw!(InvalidLogin::DuplicateLogin);
+        }
+        Ok(())
     }
 
     pub fn dupe_exists(&self, login: Login) -> Result<bool> {
@@ -1136,7 +1141,7 @@ mod tests {
     }
 
     #[test]
-    fn test_check_valid_with_no_dupes() {
+    fn test_check_valid_with_no_dupes_with_dupe() {
         let db = LoginDb::open_in_memory(Some("testing")).unwrap();
         let login = db
             .add(Login {
@@ -1149,9 +1154,31 @@ mod tests {
                 ..Login::default()
             })
             .unwrap();
-        let result = db
-            .check_valid_with_no_dupes(Login {
-                guid: Guid::empty(),
+
+        let duplicate_login_check = db.check_valid_with_no_dupes(Login {
+            guid: Guid::empty(),
+            form_submit_url: Some("https://www.example.com/submit".into()),
+            hostname: "https://www.example.com".into(),
+            http_realm: None,
+            username: "test".into(),
+            password: "test2".into(),
+            ..Login::default()
+        });
+
+        db.delete(login.guid_str()).unwrap();
+        assert!(&duplicate_login_check.is_err());
+        assert_eq!(
+            &duplicate_login_check.unwrap_err().to_string(),
+            "Invalid login: Login record already exists"
+        )
+    }
+
+    #[test]
+    fn test_check_valid_with_no_dupes_with_unique_login() {
+        let db = LoginDb::open_in_memory(Some("testing")).unwrap();
+        let login = db
+            .add(Login {
+                guid: "dummy_000001".into(),
                 form_submit_url: Some("https://www.example.com/submit".into()),
                 hostname: "https://www.example.com".into(),
                 http_realm: None,
@@ -1159,9 +1186,19 @@ mod tests {
                 password: "test".into(),
                 ..Login::default()
             })
-            .unwrap_or_default();
+            .unwrap();
+        
+        let unique_login_check = db.check_valid_with_no_dupes(Login {
+            guid: Guid::empty(),
+            form_submit_url: None,
+            hostname: "https://www.example.com".into(),
+            http_realm: Some("https://www.example.com".into()),
+            username: "test".into(),
+            password: "test".into(),
+            ..Login::default()
+        });
 
         db.delete(login.guid_str()).unwrap();
-        assert!(result);
+        assert!(&unique_login_check.is_ok())
     }
 }
